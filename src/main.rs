@@ -7,29 +7,36 @@ mod model;
 mod training;
 
 type Backend = burn::backend::Autodiff<burn::backend::ndarray::NdArray>;
-
 const EPOCHS: usize = 5;
 
+/// Train a simple regression model (single-command CLI)
 #[derive(Debug, Parser)]
-#[clap(
+#[command(
     name = "example-simple-regression",
     version = "1.0",
     author = "Jakob",
     about = "Regression motherf*cker!"
 )]
-enum Cli {
-    Regression {
-        #[clap(long, required = true)]
-        hidden_size: usize,
-        #[clap(long, required = true)]
-        num_hidden_layers: usize,
-        #[clap(long, value_enum, required = true)]
-        activation_fn: model::ActivationFunction,
-        #[clap(long, default_value_t = false)]
-        use_bias: bool,
-        #[clap(long, required = true)]
-        learning_rate: f64,
-    },
+struct Cli {
+    /// Hidden layer size
+    #[arg(long, required = true)]
+    hidden_size: usize,
+
+    /// Number of hidden layers
+    #[arg(long, required = true)]
+    num_hidden_layers: usize,
+
+    /// Activation function
+    #[arg(long, value_enum, required = true)]
+    activation_fn: model::ActivationFunction,
+
+    /// Whether to use bias
+    #[arg(long, default_value_t = false)]
+    use_bias: bool,
+
+    /// Learning rate
+    #[arg(long, required = true)]
+    learning_rate: f64,
 }
 
 #[derive(Serialize)]
@@ -38,6 +45,7 @@ struct ResultOutput {
 }
 
 fn main() {
+    // --- Initialize tracing
     let format = tracing_subscriber::fmt::format::Format::default()
         .with_level(true)
         .with_target(true)
@@ -50,48 +58,43 @@ fn main() {
         .with_max_level(Level::INFO)
         .init();
 
-    match Cli::parse() {
-        Cli::Regression {
-            hidden_size,
-            num_hidden_layers,
-            activation_fn,
-            use_bias,
-            learning_rate,
-        } => {
-            tracing::info!(
-                message = "Cli::TrainRegressionModel",
-                hidden_size = hidden_size,
-                num_hidden_layers = num_hidden_layers,
-                ?activation_fn,
-                use_bias = use_bias,
-                learning_rate = learning_rate
-            );
+    // --- Parse CLI arguments
+    let args = Cli::parse();
 
-            let device: <Backend as burn::prelude::Backend>::Device = Default::default();
+    tracing::info!(
+        message = "Cli::TrainRegressionModel",
+        hidden_size = args.hidden_size,
+        num_hidden_layers = args.num_hidden_layers,
+        ?args.activation_fn,
+        use_bias = args.use_bias,
+        learning_rate = args.learning_rate
+    );
 
-            let (dataloader_train, dataloader_valid) =
-                training::create_dataloaders::<Backend>(device, 128, 1337);
+    // --- Setup and train
+    let device: <Backend as burn::prelude::Backend>::Device = Default::default();
 
-            let model_config = model::RegressionModelConfig {
-                hidden_size,
-                num_hidden_layers,
-                activation_fn,
-                use_bias,
-                learning_rate,
-            };
+    let (dataloader_train, dataloader_valid) =
+        training::create_dataloaders::<Backend>(device, 128, 1337);
 
-            let validation_loss = training::train_silent(
-                model_config,
-                device,
-                EPOCHS,
-                &dataloader_train,
-                &dataloader_valid,
-            );
+    let model_config = model::RegressionModelConfig {
+        hidden_size: args.hidden_size,
+        num_hidden_layers: args.num_hidden_layers,
+        activation_fn: args.activation_fn,
+        use_bias: args.use_bias,
+        learning_rate: args.learning_rate,
+    };
 
-            println!(
-                "{}",
-                serde_json::to_string(&ResultOutput { validation_loss }).unwrap()
-            );
-        }
-    }
+    let validation_loss = training::train_silent(
+        model_config,
+        device,
+        EPOCHS,
+        &dataloader_train,
+        &dataloader_valid,
+    );
+
+    // --- Print result JSON for GA to capture
+    println!(
+        "{}",
+        serde_json::to_string(&ResultOutput { validation_loss }).unwrap()
+    );
 }
