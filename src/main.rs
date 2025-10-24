@@ -7,7 +7,7 @@ mod model;
 mod training;
 
 type Backend = burn::backend::Autodiff<burn::backend::ndarray::NdArray>;
-const EPOCHS: usize = 5;
+const EPOCHS: usize = 50;
 
 /// Train a simple regression model (single-command CLI)
 #[derive(Debug, Parser)]
@@ -54,6 +54,7 @@ fn main() {
         .pretty();
 
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr) // send all logs to stderr
         .event_format(format)
         .with_max_level(Level::INFO)
         .init();
