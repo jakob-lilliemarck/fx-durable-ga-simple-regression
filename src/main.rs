@@ -7,7 +7,7 @@ mod model;
 mod training;
 
 type Backend = burn::backend::Autodiff<burn::backend::ndarray::NdArray>;
-const EPOCHS: usize = 500;
+const EPOCHS: usize = 50;
 
 /// Train a simple regression model (single-command CLI)
 #[derive(Debug, Parser)]
