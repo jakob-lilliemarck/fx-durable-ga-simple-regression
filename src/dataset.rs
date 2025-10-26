@@ -23,20 +23,20 @@ impl HousingDataset {
 
         // Generate 16640 samples (similar to California Housing train size)
         for _ in 0..16640 {
-            let median_income = rng.gen_range(0.5..15.0);
-            let house_age = rng.gen_range(1.0..52.0);
-            let avg_rooms = rng.gen_range(1.0..40.0);
-            let avg_bedrooms = rng.gen_range(0.1..8.0);
-            let population = rng.gen_range(3.0..35682.0);
-            let avg_occupancy = rng.gen_range(0.7..1243.0);
-            let latitude = rng.gen_range(32.5..42.0);
-            let longitude = rng.gen_range(-124.4..-114.3);
+            let median_income = rng.random_range(0.5..15.0);
+            let house_age = rng.random_range(1.0..52.0);
+            let avg_rooms = rng.random_range(1.0..40.0);
+            let avg_bedrooms = rng.random_range(0.1..8.0);
+            let population = rng.random_range(3.0..35682.0);
+            let avg_occupancy = rng.random_range(0.7..1243.0);
+            let latitude = rng.random_range(32.5..42.0);
+            let longitude = rng.random_range(-124.4..-114.3);
 
             // Synthetic target based on realistic relationships
             let target = median_income * 0.5
                 + (house_age / 52.0) * -0.2
                 + (avg_rooms / 10.0) * 0.1
-                + rng.gen_range(-0.5..0.5); // Add noise
+                + rng.random_range(-0.5..0.5); // Add noise
 
             items.push(HousingItem {
                 features: [

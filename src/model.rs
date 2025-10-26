@@ -18,13 +18,18 @@ pub enum ActivationFunction {
     Sigmoid,
 }
 
+#[derive(Module, Debug, Clone)]
+pub enum ActivationFn {
+    Relu(Relu),
+    Gelu(Gelu),
+    Sigmoid(Sigmoid),
+}
+
 #[derive(Module, Debug)]
 pub struct RegressionModel<B: Backend> {
     hidden_layers: Vec<Linear<B>>,
     output_layer: Linear<B>,
-    relu: Relu,
-    gelu: Gelu,
-    sigmoid: Sigmoid,
+    activation_fn: ActivationFn,
 }
 
 #[derive(Config, Debug)]
@@ -64,12 +69,16 @@ impl RegressionModelConfig {
             .with_bias(self.use_bias)
             .init(device);
 
+        let activation_fn = match self.activation_fn {
+            ActivationFunction::Gelu => ActivationFn::Gelu(Gelu::new()),
+            ActivationFunction::Relu => ActivationFn::Relu(Relu::new()),
+            ActivationFunction::Sigmoid => ActivationFn::Sigmoid(Sigmoid::new()),
+        };
+
         RegressionModel {
             hidden_layers,
             output_layer,
-            relu: Relu::new(),
-            gelu: Gelu::new(),
-            sigmoid: Sigmoid::new(),
+            activation_fn: activation_fn,
         }
     }
 }
@@ -78,31 +87,13 @@ impl<B: Backend> RegressionModel<B> {
     pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
         let mut x = input;
 
-        // Forward through all hidden layers with activation
-        for layer in &self.hidden_layers {
-            x = layer.forward(x);
-            // For now, just use ReLU - we'll make this configurable later
-            x = self.relu.forward(x);
-        }
-
-        // Final output layer (no activation)
-        self.output_layer.forward(x)
-    }
-
-    pub fn forward_with_activation(
-        &self,
-        input: Tensor<B, 2>,
-        activation_fn: ActivationFunction,
-    ) -> Tensor<B, 2> {
-        let mut x = input;
-
         // Forward through all hidden layers with specified activation
         for layer in &self.hidden_layers {
             x = layer.forward(x);
-            x = match activation_fn {
-                ActivationFunction::Relu => self.relu.forward(x),
-                ActivationFunction::Gelu => self.gelu.forward(x),
-                ActivationFunction::Sigmoid => self.sigmoid.forward(x),
+            x = match self.activation_fn {
+                ActivationFn::Relu(ref relu) => relu.forward(x),
+                ActivationFn::Gelu(ref gelu) => gelu.forward(x),
+                ActivationFn::Sigmoid(ref sigmoid) => sigmoid.forward(x),
             };
         }
 
